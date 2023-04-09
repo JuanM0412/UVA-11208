@@ -67,19 +67,17 @@ def backtracking(weighted_original_matrix, weighted_matrix, original_matrix, eve
     if len(events) == 0:
         return True
     
-    copia = events.copy()
+    events_copy = events.copy()
     landings = 0
-    evento = copia.popleft()
-
-    while evento > 0:
+    event_copy = events_copy.popleft()
+    while event_copy > 0:
         landings += 1
-        evento = copia.popleft()
+        event_copy = events_copy.popleft()
     
     if available < landings:
         return False
         
     event = events.popleft()
-
     if event < 0:
         parked_airplane = abs(event)
         coordinate_i, coordinate_j = parking_info[parked_airplane][0]
@@ -91,6 +89,7 @@ def backtracking(weighted_original_matrix, weighted_matrix, original_matrix, eve
             partial_solution = backtracking(weighted_original_matrix, weighted_matrix, original_matrix, events, parking_info, parkings, available, landing_spaces)
             if partial_solution:
                 return True
+        
         weighted_original_matrix[coordinate_i][coordinate_j] = 127
         weighted_matrix, available, parkings = weight_matrix(weighted_original_matrix, landing_spaces)
         events.appendleft(event)
@@ -111,22 +110,21 @@ def backtracking(weighted_original_matrix, weighted_matrix, original_matrix, eve
                 weighted_original_matrix[i][j] = 128
                 weighted_matrix, available, parkings = weight_matrix(weighted_original_matrix, landing_spaces)
                 del(parking_info[event])
+
         events.appendleft(event)
         return False
 
 # Se encarga de leer el input, hacer la primera limpieza de la matriz y llamar a las funciones que en conjunto entregan una solución
 def main():
     n = 1
-    while n < 2:
+    while n < 22:
         first_line = input().split()
-        
         if len(first_line) < 3:
             break
 
         rows = int(first_line[1])
         original_matrix, weighted_original_matrix = [], []
         landing_spaces = deque()
-
         for i in range(rows):
             row_original, row_weighted = [], []
             j = 0
@@ -159,13 +157,13 @@ def main():
             print('\n')
         else:
             print(f'Case {n}: Yes')
-            i=1
-            while i<= len(parking_info):
+            i = 1
+            while i <= len(parking_info):
                 assigned_parking = str(parking_info[i][1])
                 if len(assigned_parking) == 1:
                     assigned_parking = '0' + assigned_parking
                 print(assigned_parking, end=' ')
-                i+=1
+                i += 1
             print('\n')
 
         n += 1
