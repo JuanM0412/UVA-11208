@@ -148,7 +148,7 @@ def main():
                     print('+' + str(element), end=' ')
                 else:
                     print(element, end=' ')
-            print('\nThe order of parking was:')
+            print('\nThe parking order was:')
             i = 1
             while i <= len(parking_info):
                 assigned_parking = str(parking_info[i][1])
