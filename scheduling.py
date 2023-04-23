@@ -23,27 +23,11 @@ def dfs(graph, weighted_matrix, current, visited):
     for route in routes:
         if route not in visited and graph[route][1] != False:
             visited.append(route)
-            auxiliar = dfs(graph, weighted_matrix, route, visited)
-            if auxiliar is True:
-                return auxiliar
+            partial_route = dfs(graph, weighted_matrix, route, visited)
+            if partial_route is True:
+                return partial_route
     
     return False
-
-
-#Busca todos los parqueaderos . Se DEBE hacer LUEGO EN LA PONDERACIÓN
-def search_parks(weighted_matrix, original_matrix):
-    parks = []
-    i = 0
-    while i < len(weighted_matrix):
-        j = 0
-        while j < len(weighted_matrix[0]):
-            if weighted_matrix[i][j] > 0 and original_matrix[i][j] not in (0, -1, 127, 128):
-                parks.append((i,j))
-
-            j += 1
-        i += 1
-
-    return parks
 
 
 #Se recibe parkings_coordinates como un arreglo
@@ -63,7 +47,7 @@ def who_is_tapping_me(original_matrix, weighted_matrix, parkings_coordinates):
         for element in following:
             travel_queue.append(element)
         
-        while len(travel_queue)>0:
+        while len(travel_queue) > 0:
             current = travel_queue.pop()                    
             if original_matrix[current[0]][current[1]] == -1 and weighted_matrix[current[0]][current[1]] > 0:
                 following = adjacents(current, weighted_matrix)
@@ -130,13 +114,13 @@ def weight_matrix(original_weighted_matrix, landing_spaces):
                 available += 1
                 processed_coordinates.append((neighbor[0], neighbor[1]))
 
-    return (weighted_matrix, parkings)
+    return (weighted_matrix, parkings)  
 
 
 # En caso de que exista solución la encuentra y retorna un arreglo lleno de parking, cada uno corresponde a un avión (en orden de llegada)
 # En caso de que la solución no exista retorna falso
 # Como parametros recibe la matriz ponderada, la matriz original, la lista de eventos (entradas y salidas), un arreglo donde va ir almacenando cada parqueadero y un diccionario, donde el Key corresponde a un avión parqueado y en sus Values tiene 1) Las coordenadas de donde se parqueó el avión y 2) El peso que tenía esa coordenada antes de ser ocupada
-def backtracking(who, weighted_matrix, original_matrix, events, parking_info, parkings):
+def backtracking(graph, weighted_matrix, original_matrix, events, parking_info, parkings):
     if len(events) == 0:
         return True
         
@@ -145,58 +129,47 @@ def backtracking(who, weighted_matrix, original_matrix, events, parking_info, pa
         parked_airplane = abs(event)
         coordinate = parking_info[parked_airplane][0]
         if weighted_matrix[coordinate[0]][coordinate[1]] == 1:
-            aux = who[coordinate][0]
-            who[coordinate] = (aux, True)
-            partial_solution = backtracking(who, weighted_matrix, original_matrix, events, parking_info, parkings)
+            aux = graph[coordinate][0]
+            graph[coordinate] = (aux, True)
+            partial_solution = backtracking(graph, weighted_matrix, original_matrix, events, parking_info, parkings)
             if partial_solution:
                 return True
             else:
+                aux = graph[coordinate][0]
+                graph[coordinate] = (aux, False)
                 events.appendleft(event)
                 return False
         
-        visitados = []
-        flag = dfs(who,weighted_matrix,coordinate,visitados)
+        visited = []
+        flag = dfs(graph, weighted_matrix, coordinate, visited)
         if flag:
-            aux = who[coordinate][0]
-            who[coordinate]=(aux, True)
-            partial_solution = backtracking(who, weighted_matrix, original_matrix, events, parking_info, parkings)
+            aux = graph[coordinate][0]
+            graph[coordinate] = (aux, True)
+            partial_solution = backtracking(graph, weighted_matrix, original_matrix, events, parking_info, parkings)
             if partial_solution:
                 return True
             
+        aux = graph[coordinate][0]
+        graph[coordinate] = (aux, False)
         events.appendleft(event)
         return False
 
     else:
         for parking in parkings:
-            if who[parking][1] is True:
-                if weighted_matrix[parking[0]][parking[1]] == 1:
-                    i, j = parking
-                    parking_info[event] = ((i, j), original_matrix[i][j])
-                    aux = who[parking][0]
-                    who[parking] = (aux,False)
-                    partial_solution = backtracking(who, weighted_matrix, original_matrix, events, parking_info, parkings)
+            if graph[parking][1] is not False:
+                visited = []
+                flag = dfs(graph, weighted_matrix, parking, visited)
+                if flag:
+                    parking_info[event] = (parking, original_matrix[parking[0]][parking[1]])
+                    aux = graph[parking][0]
+                    graph[parking] = (aux, False)
+                    partial_solution = backtracking(graph, weighted_matrix, original_matrix, events, parking_info, parkings)
                     if partial_solution:
                         return True
                     else:
-                        aux = who[parking][0]
-                        who[parking] = (aux,True)
+                        aux = graph[parking][0]
+                        graph[parking] = (aux, True)
                         del(parking_info[event])
-
-                else:
-                    visitados = []
-                    flag = dfs(who,weighted_matrix,parking,visitados)
-                    if flag:
-                        i, j = parking
-                        parking_info[event] = ((i, j), original_matrix[i][j])
-                        aux = who[parking][0]
-                        who[parking] = (aux, False)
-                        partial_solution = backtracking(who, weighted_matrix, original_matrix, events, parking_info, parkings)
-                        if partial_solution:
-                            return True
-                        else:
-                            aux = who[parking][0]
-                            who[parking] = (aux,True)
-                            del(parking_info[event])
 
         events.appendleft(event)
         return False
@@ -210,10 +183,11 @@ def main():
             break
 
         rows = int(first_line[1])
-        original_matrix, weighted_original_matrix = [], []
+        colums = int(first_line[2])
+        original_matrix, weighted_original_matrix = []*colums, []*colums
         landing_spaces = deque()
         for i in range(rows):
-            row_original, row_weighted = [], []
+            row_original, row_weighted = []*rows, []*rows
             j = 0
             for element in input().split():
                 if element == '..':
@@ -236,8 +210,8 @@ def main():
         events = deque(map(int, input().split()))
         parking_info = {}
         weighted_matrix, parkings = weight_matrix(weighted_original_matrix, landing_spaces)
-        who = who_is_tapping_me(original_matrix, weighted_matrix, parkings)
-        solution = backtracking(who, weighted_matrix, original_matrix, events, parking_info, parkings)
+        graph = who_is_tapping_me(original_matrix, weighted_matrix, parkings)
+        solution = backtracking(graph, weighted_matrix, original_matrix, events, parking_info, parkings)
         if solution == False:
             print(f'Case {n}: No')
             print('\n')
