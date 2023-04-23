@@ -1,10 +1,5 @@
 from collections import deque
 
-#Grafo_lista de adyacencia
-#Matriz es la original
-#Actual es una tupla de coordenadas
-#Visitados es un arreglo
-
 def sort_tuples(tuples_array, matrix):
     # Creamos una lista de tuplas, donde cada tupla contiene la coordenada y el valor correspondiente en la matriz.
     tuples_list = [(coordinate, matrix[coordinate[0]][coordinate[1]]) for coordinate in tuples_array]
@@ -19,49 +14,45 @@ def dfs(graph, weighted_matrix, current, visited):
         return True
     
     routes = graph[current][0]
-    visited.append(current)
+    visited.add(current)
     for route in routes:
         if route not in visited and graph[route][1] != False:
-            visited.append(route)
+            visited.add(route)
             partial_route = dfs(graph, weighted_matrix, route, visited)
             if partial_route is True:
-                return partial_route
+                return True
     
     return False
 
 
-#Se recibe parkings_coordinates como un arreglo
 def who_is_tapping_me(original_matrix, weighted_matrix, parkings_coordinates):
     dictionary = {}
     for parking in parkings_coordinates:
+        dictionary[parking] = ([], True)
         if weighted_matrix[parking[0]][parking[1]] == 1:
-            dictionary[parking] = ([], True)
             continue
 
-        visiteds = []
+        visiteds = set()
         travel_queue = deque()
-        dictionary[parking] = ([], True)
-        visiteds.append(parking)
-        #grado=weighted_matrix[parking[0]][parking[1]]
-        following = adjacents(parking, weighted_matrix)
+        visiteds.add(parking)
+        following = adjacents(parking, len(weighted_matrix), len(weighted_matrix[0]))
         for element in following:
             travel_queue.append(element)
         
         while len(travel_queue) > 0:
             current = travel_queue.pop()                    
             if original_matrix[current[0]][current[1]] == -1 and weighted_matrix[current[0]][current[1]] > 0:
-                following = adjacents(current, weighted_matrix)
-                visiteds.append(current)
+                following = adjacents(current, len(weighted_matrix), len(weighted_matrix[0]))
+                visiteds.add(current)
                 for element in following:
                     if element not in visiteds and element not in travel_queue:
                         travel_queue.append(element)
 
-            if original_matrix[current[0]][current[1]] not in (0, -1, 127, 128) and current not in visiteds:
-                aux = dictionary[parking]
-                arr = aux[0]
-                arr.append((current[0], current[1]))
-                dictionary[parking] = (arr, aux[1])
-                visiteds.append(current)
+            if original_matrix[current[0]][current[1]] not in (0, -1, 127) and current not in visiteds and weighted_matrix[current[0]][current[1]] != 128:
+                aux = dictionary[parking][0]
+                aux.append((current[0], current[1]))
+                dictionary[parking] = (aux, True)
+                visiteds.add(current)
         
         sorted = sort_tuples(dictionary[parking][0], weighted_matrix) 
         dictionary[parking] = (sorted, True)   
@@ -69,46 +60,37 @@ def who_is_tapping_me(original_matrix, weighted_matrix, parkings_coordinates):
     return dictionary
 
 
-# Evita que al recorrer los vecinos de una casilla cualquiera en la matriz se salga de esta. 
-# Tiene como paramétros las coordenadas (tupla) de la casilla que quiero validar si se encuentra en el rango o no, y las dimensiones máximas de la matriz
-# Retorna True en caso de que la coordenada no exceda las dimensiones de la matriz
-def isValid(coordinates, row_max, column_max):
-    return 0 <= coordinates[0] < row_max and 0 <= coordinates[1] < column_max
-
-
 # Ayuda a encontrar las casillas adyacentes a una casilla (en coordenadas) dada
 # Sus parametros son las coordenadas de una casilla (tupla) y la matriz ponderada
 # Retorna un arreglo donde están todos los vecinos válidos (que respeten los límites de la matriz y no sean bloqueos) a una coordenada
-def adjacents(coordinates, weighted_matrix):
+def adjacents(coordinates, row_max, column_max):
     mov_columns = [-1, 0, 1, 0]
     mov_rows = [0, 1, 0, -1]
-
     neighbors = []
     coordinate_x, coordinate_y = coordinates
-
     for i in range(4):
         adj_x = coordinate_x + mov_columns[i]
         adj_y = coordinate_y + mov_rows[i]
-        if isValid((adj_x, adj_y), len(weighted_matrix), len(weighted_matrix[0])) and weighted_matrix[adj_x][adj_y] != 127:
+        if 0 <= adj_x < row_max and 0 <= adj_y < column_max:
             neighbors.append((adj_x, adj_y))
 
     return neighbors
 
+
 #Se encarga de devolver la matriz ponderada. Recibe la matriz que fue ponderada originalmente y un deque en el que se almacenan las coordenadas de los lugares de aterrizaje y despegue
-def weight_matrix(original_weighted_matrix, landing_spaces):
-    weighted_matrix = [row[:] for row in original_weighted_matrix]
+def weight_matrix(weighted_matrix, landing_spaces):
     available = 0
     parkings = []
     processed_coordinates = deque(landing_spaces)
 
     while processed_coordinates:
         coordinates = processed_coordinates.popleft()
-        neighbors = adjacents(coordinates, weighted_matrix)
+        neighbors = adjacents(coordinates, len(weighted_matrix), len(weighted_matrix[0]))
         for neighbor in neighbors:
-            if weighted_matrix[neighbor[0]][neighbor[1]] == -1:
+            if weighted_matrix[neighbor[0]][neighbor[1]] == -1 and weighted_matrix[neighbor[0]][neighbor[1]] != 127:
                 weighted_matrix[neighbor[0]][neighbor[1]] = weighted_matrix[coordinates[0]][coordinates[1]]
                 processed_coordinates.appendleft((neighbor[0], neighbor[1]))
-            elif weighted_matrix[neighbor[0]][neighbor[1]] == 128:
+            elif weighted_matrix[neighbor[0]][neighbor[1]] == 128 and weighted_matrix[neighbor[0]][neighbor[1]] != 127:
                 parkings.append((neighbor[0], neighbor[1]))
                 weighted_matrix[neighbor[0]][neighbor[1]] = weighted_matrix[coordinates[0]][coordinates[1]] + 1
                 available += 1
@@ -140,7 +122,7 @@ def backtracking(graph, weighted_matrix, original_matrix, events, parking_info, 
                 events.appendleft(event)
                 return False
         
-        visited = []
+        visited = set()
         flag = dfs(graph, weighted_matrix, coordinate, visited)
         if flag:
             aux = graph[coordinate][0]
@@ -157,7 +139,7 @@ def backtracking(graph, weighted_matrix, original_matrix, events, parking_info, 
     else:
         for parking in parkings:
             if graph[parking][1] is not False:
-                visited = []
+                visited = set()
                 flag = dfs(graph, weighted_matrix, parking, visited)
                 if flag:
                     parking_info[event] = (parking, original_matrix[parking[0]][parking[1]])
@@ -174,7 +156,7 @@ def backtracking(graph, weighted_matrix, original_matrix, events, parking_info, 
         events.appendleft(event)
         return False
 
-# Se encarga de leer el input, hacer la primera limpieza de la matriz y llamar a las funciones que en conjunto entregan una solución
+
 def main():
     n = 1
     while n < 22:
@@ -184,7 +166,7 @@ def main():
 
         rows = int(first_line[1])
         colums = int(first_line[2])
-        original_matrix, weighted_original_matrix = []*colums, []*colums
+        original_matrix, weighted_matrix = []*colums, []*colums
         landing_spaces = deque()
         for i in range(rows):
             row_original, row_weighted = []*rows, []*rows
@@ -205,11 +187,11 @@ def main():
                     row_original.append(int(element))
                 j += 1
             original_matrix.append(row_original)
-            weighted_original_matrix.append(row_weighted)
+            weighted_matrix.append(row_weighted)
 
         events = deque(map(int, input().split()))
         parking_info = {}
-        weighted_matrix, parkings = weight_matrix(weighted_original_matrix, landing_spaces)
+        weighted_matrix, parkings = weight_matrix(weighted_matrix, landing_spaces)
         graph = who_is_tapping_me(original_matrix, weighted_matrix, parkings)
         solution = backtracking(graph, weighted_matrix, original_matrix, events, parking_info, parkings)
         if solution == False:
