@@ -63,7 +63,7 @@ def taking_off(coordinates, weighted_matrix):
 # En caso de que exista solución la encuentra y retorna un arreglo lleno de parqueaderos, cada uno corresponde a un avión (en orden de llegada)
 # En caso de que la solución no exista retorna falso
 # Como parametros recibe la matriz ponderada, la matriz original, la lista de eventos (entradas y salidas), un arreglo donde va ir almacenando cada parqueadero y un diccionario, donde el Key corresponde a un avión parqueado y en sus Values tiene 1) Las coordenadas de donde se parqueó el avión y 2) El peso que tenía esa coordenada antes de ser ocupada
-def backtracking(weighted_original_matrix, weighted_matrix, original_matrix, events, parking_info, parkings, available, landing_spaces):
+def backtracking(weighted_original, weighted_matrix, original_matrix, events, parking_info, parkings, available, landing_spaces):
     if len(events) == 0:
         return True
     
@@ -84,14 +84,14 @@ def backtracking(weighted_original_matrix, weighted_matrix, original_matrix, eve
         neighbor_available = taking_off((coordinate_i, coordinate_j), weighted_matrix)
         if neighbor_available:
             original_matrix[coordinate_i][coordinate_j] = parking_info[abs(event)][1]
-            weighted_original_matrix[coordinate_i][coordinate_j] = 128
-            weighted_matrix, available, parkings = weight_matrix(weighted_original_matrix, landing_spaces)
-            partial_solution = backtracking(weighted_original_matrix, weighted_matrix, original_matrix, events, parking_info, parkings, available, landing_spaces)
+            weighted_original[coordinate_i][coordinate_j] = 128
+            weighted_matrix, available, parkings = weight_matrix(weighted_original, landing_spaces)
+            partial_solution = backtracking(weighted_original, weighted_matrix, original_matrix, events, parking_info, parkings, available, landing_spaces)
             if partial_solution:
                 return True
         
-        weighted_original_matrix[coordinate_i][coordinate_j] = 127
-        weighted_matrix, available, parkings = weight_matrix(weighted_original_matrix, landing_spaces)
+        weighted_original[coordinate_i][coordinate_j] = 127
+        weighted_matrix, available, parkings = weight_matrix(weighted_original, landing_spaces)
         events.appendleft(event)
         return False
 
@@ -100,15 +100,15 @@ def backtracking(weighted_original_matrix, weighted_matrix, original_matrix, eve
             i, j = parking
             temp = original_matrix[i][j]
             parking_info[event] = ((i, j), original_matrix[i][j])
-            weighted_original_matrix[i][j] = 127
-            weighted_matrix, available, parkings = weight_matrix(weighted_original_matrix, landing_spaces)
-            partial_solution = backtracking(weighted_original_matrix, weighted_matrix, original_matrix, events, parking_info, parkings, available, landing_spaces)
+            weighted_original[i][j] = 127
+            weighted_matrix, available, parkings = weight_matrix(weighted_original, landing_spaces)
+            partial_solution = backtracking(weighted_original, weighted_matrix, original_matrix, events, parking_info, parkings, available, landing_spaces)
             if partial_solution:
                 return True
             else:
                 original_matrix[i][j] = temp
-                weighted_original_matrix[i][j] = 128
-                weighted_matrix, available, parkings = weight_matrix(weighted_original_matrix, landing_spaces)
+                weighted_original[i][j] = 128
+                weighted_matrix, available, parkings = weight_matrix(weighted_original, landing_spaces)
                 del(parking_info[event])
 
         events.appendleft(event)
@@ -117,13 +117,10 @@ def backtracking(weighted_original_matrix, weighted_matrix, original_matrix, eve
 # Se encarga de leer el input, hacer la primera limpieza de la matriz y llamar a las funciones que en conjunto entregan una solución
 def main():
     n = 1
-    while n < 22:
-        first_line = input().split()
-        if len(first_line) < 3:
-            break
-
+    first_line = input().split()
+    while len(first_line) == 3:
         rows = int(first_line[1])
-        original_matrix, weighted_original_matrix = [], []
+        original_matrix, weighted_original = [], []
         landing_spaces = deque()
         for i in range(rows):
             row_original, row_weighted = [], []
@@ -144,13 +141,13 @@ def main():
                     row_original.append(int(element))
                 j += 1
             original_matrix.append(row_original)
-            weighted_original_matrix.append(row_weighted)
+            weighted_original.append(row_weighted)
 
         events = deque(map(int, input().split()))
 
         parking_info = {}
-        weighted_matrix, available, parkings = weight_matrix(weighted_original_matrix, landing_spaces)
-        solution = backtracking(weighted_original_matrix, weighted_matrix, original_matrix, events, parking_info, parkings, available, landing_spaces)
+        weighted_matrix, available, parkings = weight_matrix(weighted_original, landing_spaces)
+        solution = backtracking(weighted_original, weighted_matrix, original_matrix, events, parking_info, parkings, available, landing_spaces)
 
         if solution == False:
             print(f'Case {n}: No')
@@ -165,7 +162,8 @@ def main():
                 print(assigned_parking, end=' ')
                 i += 1
             print('\n')
-
+        
+        first_line = input().split()
         n += 1
 
 
